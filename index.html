@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="每日一句">
+<meta name="theme-color" content="#1a1a2e">
+<title>每日一句</title>
+
+<!-- PWA Manifest (inline) -->
+<script>
+const manifestData = {
+  name: "每日一句",
+  short_name: "每日語錄",
+  description: "每天一句話，陪伴你的每一天",
+  start_url: ".",
+  display: "standalone",
+  background_color: "#1a1a2e",
+  theme_color: "#1a1a2e",
+  icons: [
+    { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%231a1a2e'/><text x='96' y='130' text-anchor='middle' font-size='100' fill='%23f0c96e'>✦</text></svg>", sizes: "192x192", type: "image/svg+xml" },
+    { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%231a1a2e'/><text x='256' y='340' text-anchor='middle' font-size='280' fill='%23f0c96e'>✦</text></svg>", sizes: "512x512", type: "image/svg+xml" }
+  ]
+};
+const blob = new Blob([JSON.stringify(manifestData)], { type: "application/json" });
+const manifestURL = URL.createObjectURL(blob);
+const link = document.createElement("link");
+link.rel = "manifest";
+link.href = manifestURL;
+document.head.appendChild(link);
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Ma+Shan+Zheng&display=swap');
+
+:root {
+  --bg-deep:    #1a1a2e;
+  --bg-mid:     #16213e;
+  --bg-card:    #0f3460;
+  --gold:       #f0c96e;
+  --gold-dim:   #c4982e;
+  --silver:     #a8b2c8;
+  --light:      #e8ecf4;
+  --pos-accent: #7ed8a6;
+  --neg-accent: #e88a8a;
+  --radius:     20px;
+  --shadow:     0 8px 32px rgba(0,0,0,0.45);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  font-family: 'Noto Serif TC', Georgia, serif;
+  background: var(--bg-deep);
+  color: var(--light);
+  overscroll-behavior: none;
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(ellipse at 20% 20%, #0f3460 0%, #1a1a2e 60%),
+              radial-gradient(ellipse at 80% 80%, #16213e 0%, transparent 60%);
+}
+
+/* ── Stars background ── */
+.stars {
+  position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+}
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--gold);
+  opacity: 0;
+  animation: twinkle var(--d, 4s) var(--delay, 0s) infinite;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  50%       { opacity: var(--op, 0.6); transform: scale(1); }
+}
+
+/* ── Layout ── */
+.app {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 0 env(safe-area-inset-bottom, 16px);
+}
+
+/* ── Header ── */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 12px;
+}
+.logo {
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-star { font-size: 22px; color: var(--gold); animation: spin 12s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.logo-title { font-family: 'Ma Shan Zheng', cursive; font-size: 22px; color: var(--gold); letter-spacing: 2px; }
+.date-badge {
+  font-size: 12px; color: var(--silver);
+  background: rgba(255,255,255,0.07);
+  padding: 5px 12px; border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Today's quote card ── */
+.section-label {
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--silver); opacity: 0.7;
+  padding: 0 24px; margin-bottom: 10px;
+}
+
+.today-card {
+  margin: 8px 20px 0;
+  background: linear-gradient(135deg, var(--bg-card) 0%, #1a3a6e 100%);
+  border-radius: var(--radius);
+  padding: 32px 28px 28px;
+  box-shadow: var(--shadow), 0 0 0 1px rgba(240,201,110,0.15);
+  position: relative; overflow: hidden;
+  animation: cardIn 0.6s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+.today-card::before {
+  content: '❝';
+  position: absolute; top: -8px; left: 20px;
+  font-size: 72px; color: var(--gold); opacity: 0.12;
+  font-family: Georgia, serif; line-height: 1;
+}
+.energy-tag {
+  display: inline-block;
+  font-size: 11px; letter-spacing: 1.5px;
+  padding: 3px 10px; border-radius: 20px;
+  margin-bottom: 16px; font-family: 'Noto Serif TC', serif;
+}
+.energy-tag.pos { background: rgba(126,216,166,0.15); color: var(--pos-accent); border: 1px solid rgba(126,216,166,0.3); }
+.energy-tag.neg { background: rgba(232,138,138,0.15); color: var(--neg-accent); border: 1px solid rgba(232,138,138,0.3); }
+.energy-tag.custom { background: rgba(240,201,110,0.12); color: var(--gold); border: 1px solid rgba(240,201,110,0.3); }
+
+.quote-text {
+  font-size: clamp(18px, 5vw, 22px);
+  line-height: 1.8;
+  color: var(--light);
+  letter-spacing: 0.5px;
+  font-weight: 400;
+  text-align: justify;
+}
+.quote-author {
+  margin-top: 18px;
+  font-size: 13px; color: var(--silver);
+  text-align: right; letter-spacing: 1px;
+}
+.quote-author:not(:empty)::before { content: '— '; }
+
+/* ── Divider ── */
+.divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 22px 24px 14px;
+}
+.divider-line { flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+.divider-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); opacity: 0.5; }
+
+/* ── Buttons ── */
+.btn-row { display: flex; gap: 12px; margin: 0 20px; }
+
+.btn {
+  flex: 1; border: none; border-radius: 14px;
+  padding: 16px 12px;
+  font-family: 'Noto Serif TC', serif;
+  font-size: 15px; letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn:active { transform: scale(0.96); }
+
+.btn-draw {
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  color: var(--bg-deep); font-weight: 700;
+  box-shadow: 0 4px 16px rgba(240,201,110,0.3);
+}
+.btn-add {
+  background: rgba(255,255,255,0.07);
+  color: var(--light);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.btn-add:hover { background: rgba(255,255,255,0.12); }
+
+/* ── Random result card ── */
+.random-card {
+  margin: 16px 20px 0;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: none;
+  animation: slideIn 0.4s cubic-bezier(0.22,1,0.36,1) both;
+}
+.random-card.show { display: block; }
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+.random-label {
+  font-size: 11px; color: var(--silver); letter-spacing: 2px; margin-bottom: 12px; opacity: 0.6;
+}
+.random-text {
+  font-size: clamp(16px, 4.5vw, 19px);
+  line-height: 1.8; color: var(--light); letter-spacing: 0.3px;
+}
+.random-author { font-size: 12px; color: var(--silver); text-align: right; margin-top: 12px; letter-spacing: 1px; }
+.random-author:not(:empty)::before { content: '— '; }
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--bg-mid);
+  border-radius: 24px 24px 0 0;
+  padding: 28px 24px 36px;
+  width: 100%; max-width: 480px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.22,1,0.36,1);
+}
+.modal-overlay.open .modal { transform: none; }
+.modal-handle {
+  width: 40px; height: 4px; border-radius: 2px;
+  background: rgba(255,255,255,0.2);
+  margin: 0 auto 24px;
+}
+.modal-title {
+  font-family: 'Ma Shan Zheng', cursive;
+  font-size: 20px; color: var(--gold);
+  margin-bottom: 20px; letter-spacing: 2px;
+}
+.modal textarea {
+  width: 100%; height: 110px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  color: var(--light); font-family: 'Noto Serif TC', serif;
+  font-size: 15px; line-height: 1.7; padding: 14px;
+  resize: none; outline: none;
+  transition: border-color 0.2s;
+}
+.modal textarea:focus { border-color: var(--gold-dim); }
+.modal textarea::placeholder { color: rgba(255,255,255,0.25); }
+.modal input[type="text"] {
+  width: 100%; margin-top: 12px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  color: var(--light); font-family: 'Noto Serif TC', serif;
+  font-size: 14px; padding: 12px 14px;
+  outline: none; transition: border-color 0.2s;
+}
+.modal input[type="text"]:focus { border-color: var(--gold-dim); }
+.modal input[type="text"]::placeholder { color: rgba(255,255,255,0.25); }
+.energy-select {
+  display: flex; gap: 10px; margin-top: 14px;
+}
+.energy-option {
+  flex: 1; padding: 10px; border-radius: 10px;
+  text-align: center; font-size: 13px; cursor: pointer;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  transition: all 0.18s;
+}
+.energy-option.selected-pos { border-color: var(--pos-accent); background: rgba(126,216,166,0.12); color: var(--pos-accent); }
+.energy-option.selected-neg { border-color: var(--neg-accent); background: rgba(232,138,138,0.12); color: var(--neg-accent); }
+.energy-option:not(.selected-pos):not(.selected-neg) { color: var(--silver); }
+.modal-btn-row { display: flex; gap: 10px; margin-top: 20px; }
+.btn-cancel {
+  flex: 1; padding: 14px; border-radius: 12px;
+  background: rgba(255,255,255,0.06); color: var(--silver);
+  border: 1px solid rgba(255,255,255,0.1);
+  font-family: 'Noto Serif TC', serif; font-size: 15px; cursor: pointer;
+}
+.btn-save {
+  flex: 2; padding: 14px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  color: var(--bg-deep); font-weight: 700;
+  border: none; font-family: 'Noto Serif TC', serif; font-size: 15px; cursor: pointer;
+}
+
+/* ── My quotes list ── */
+.my-quotes-section { margin: 20px 20px 0; }
+.my-quotes-section .section-label { padding: 0; margin-bottom: 12px; }
+.quote-list { display: flex; flex-direction: column; gap: 10px; }
+.quote-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex; align-items: flex-start; gap: 12px;
+  animation: itemIn 0.3s ease both;
+}
+@keyframes itemIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+.quote-item-text { flex: 1; font-size: 14px; line-height: 1.7; color: var(--light); }
+.quote-item-author { font-size: 11px; color: var(--silver); margin-top: 5px; }
+.btn-delete {
+  background: none; border: none; cursor: pointer;
+  color: rgba(232,138,138,0.5); font-size: 18px;
+  padding: 2px 4px; transition: color 0.2s;
+  flex-shrink: 0;
+}
+.btn-delete:hover { color: var(--neg-accent); }
+
+/* ── Footer ── */
+footer {
+  margin-top: auto;
+  text-align: center;
+  padding: 24px 24px 12px;
+  font-size: 11px; color: rgba(255,255,255,0.2);
+  letter-spacing: 1px;
+}
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: rgba(240,201,110,0.9); color: var(--bg-deep);
+  padding: 10px 22px; border-radius: 20px;
+  font-size: 14px; letter-spacing: 1px;
+  opacity: 0; pointer-events: none;
+  transition: all 0.3s ease; z-index: 999;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Stars -->
+<div class="stars" id="stars"></div>
+
+<div class="app">
+  <header>
+    <div class="logo">
+      <span class="logo-star">✦</span>
+      <span class="logo-title">每日一句</span>
+    </div>
+    <div class="date-badge" id="dateBadge"></div>
+  </header>
+
+  <div class="section-label">✧ 今日語錄</div>
+
+  <div class="today-card" id="todayCard">
+    <span class="energy-tag" id="todayTag"></span>
+    <div class="quote-text" id="todayText"></div>
+    <div class="quote-author" id="todayAuthor"></div>
+  </div>
+
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-dot"></div>
+    <div class="divider-line"></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-draw" onclick="drawRandom()">✦ 再抽一句</button>
+    <button class="btn btn-add" onclick="openModal()">＋ 新增語錄</button>
+  </div>
+
+  <div class="random-card" id="randomCard">
+    <div class="random-label">✦ 隨機抽到</div>
+    <div class="random-text" id="randomText"></div>
+    <div class="random-author" id="randomAuthor"></div>
+  </div>
+
+  <div class="my-quotes-section" id="myQuotesSection" style="display:none">
+    <div class="section-label">✧ 我的語錄</div>
+    <div class="quote-list" id="quoteList"></div>
+  </div>
+
+  <footer>每一天都值得被好好感受</footer>
+</div>
+
+<!-- Add Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalIfBg(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">新增語錄</div>
+    <textarea id="newQuoteText" placeholder="輸入你喜歡的句子…"></textarea>
+    <input type="text" id="newQuoteAuthor" placeholder="作者（可留空）">
+    <div class="energy-select">
+      <div class="energy-option selected-pos" id="optPos" onclick="selectEnergy('pos')">✦ 正能量</div>
+      <div class="energy-option" id="optNeg" onclick="selectEnergy('neg')">✦ 負能量</div>
+    </div>
+    <div class="modal-btn-row">
+      <button class="btn-cancel" onclick="closeModal()">取消</button>
+      <button class="btn-save" onclick="saveQuote()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Built-in quotes ─────────────────────────────────────────────
+const BUILTIN = [
+  { text: "你不必變得完美，才值得被愛。", author: "", energy: "pos" },
+  { text: "每一個今天，都是你人生中最年輕的一天。", author: "", energy: "pos" },
+  { text: "慢慢來，比較快。", author: "幾米", energy: "pos" },
+  { text: "你所站立的地方，正是你的道場。", author: "", energy: "pos" },
+  { text: "即使走得很慢，只要不停下腳步，就是在前進。", author: "林肯", energy: "pos" },
+  { text: "陽光總在風雨後，請相信有彩虹。", author: "", energy: "pos" },
+  { text: "你已經比昨天的自己更好了。", author: "", energy: "pos" },
+  { text: "世界不會因為你的悲傷而停止轉動，所以哭完記得繼續走。", author: "", energy: "neg" },
+  { text: "有些路，只能自己走完，沒有人能替你受苦。", author: "", energy: "neg" },
+  { text: "人生沒有白走的路，每一步都算數，包括那些繞遠的。", author: "", energy: "neg" },
+  { text: "並不是所有努力都有回報，但不努力一定沒有。", author: "", energy: "neg" },
+  { text: "放棄很容易，但帶著傷繼續，才需要真正的勇氣。", author: "", energy: "neg" },
+  { text: "你以為是終點的地方，其實只是另一條路的岔口。", author: "", energy: "neg" },
+  { text: "有些人離開了，是因為你的故事裡他只是個配角。", author: "", energy: "neg" },
+  { text: "最深的孤獨不是一個人，而是在人群中找不到共鳴的自己。", author: "", energy: "neg" },
+];
+
+// ── LocalStorage helpers ─────────────────────────────────────────
+function loadCustom() {
+  try { return JSON.parse(localStorage.getItem('dq_custom') || '[]'); }
+  catch { return []; }
+}
+function saveCustom(arr) {
+  localStorage.setItem('dq_custom', JSON.stringify(arr));
+}
+
+// ── Date utilities ───────────────────────────────────────────────
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+}
+function dateLabel() {
+  const d = new Date();
+  const days = ['日','一','二','三','四','五','六'];
+  return `${d.getMonth()+1}月${d.getDate()}日 週${days[d.getDay()]}`;
+}
+function dailyIndex(pool) {
+  // Deterministic by date
+  const str = todayStr();
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
+  return hash % pool.length;
+}
+
+// ── Render today ─────────────────────────────────────────────────
+function renderToday() {
+  const custom = loadCustom();
+  const all = [...BUILTIN, ...custom];
+  const q = all[dailyIndex(all)];
+  document.getElementById('todayText').textContent = q.text;
+  document.getElementById('todayAuthor').textContent = q.author || '';
+  const tag = document.getElementById('todayTag');
+  if (custom.includes(q)) {
+    tag.textContent = '自定義'; tag.className = 'energy-tag custom';
+  } else if (q.energy === 'pos') {
+    tag.textContent = '正能量'; tag.className = 'energy-tag pos';
+  } else {
+    tag.textContent = '負能量'; tag.className = 'energy-tag neg';
+  }
+}
+
+// ── Random draw ──────────────────────────────────────────────────
+let lastRandom = -1;
+function drawRandom() {
+  const custom = loadCustom();
+  const all = [...BUILTIN, ...custom];
+  let idx;
+  do { idx = Math.floor(Math.random() * all.length); } while (idx === lastRandom && all.length > 1);
+  lastRandom = idx;
+  const q = all[idx];
+  const card = document.getElementById('randomCard');
+  document.getElementById('randomText').textContent = q.text;
+  document.getElementById('randomAuthor').textContent = q.author || '';
+  card.classList.remove('show');
+  void card.offsetWidth;
+  card.classList.add('show');
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Custom quote list ────────────────────────────────────────────
+function renderList() {
+  const custom = loadCustom();
+  const section = document.getElementById('myQuotesSection');
+  const list = document.getElementById('quoteList');
+  if (!custom.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  list.innerHTML = '';
+  custom.forEach((q, i) => {
+    const item = document.createElement('div');
+    item.className = 'quote-item';
+    item.innerHTML = `
+      <div style="flex:1">
+        <div class="quote-item-text">${escHtml(q.text)}</div>
+        ${q.author ? `<div class="quote-item-author">— ${escHtml(q.author)}</div>` : ''}
+        <div style="margin-top:6px"><span class="energy-tag ${q.energy === 'pos' ? 'pos' : 'neg'}" style="font-size:10px;padding:2px 8px;">${q.energy === 'pos' ? '正能量' : '負能量'}</span></div>
+      </div>
+      <button class="btn-delete" onclick="deleteQuote(${i})" title="刪除">✕</button>
+    `;
+    list.appendChild(item);
+  });
+}
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function deleteQuote(i) {
+  const custom = loadCustom();
+  custom.splice(i, 1);
+  saveCustom(custom);
+  renderList();
+  renderToday();
+  showToast('已刪除');
+}
+
+// ── Modal ────────────────────────────────────────────────────────
+let selectedEnergy = 'pos';
+function openModal() {
+  document.getElementById('newQuoteText').value = '';
+  document.getElementById('newQuoteAuthor').value = '';
+  selectEnergy('pos');
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('newQuoteText').focus(), 350);
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+function closeModalIfBg(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+function selectEnergy(val) {
+  selectedEnergy = val;
+  document.getElementById('optPos').className = 'energy-option' + (val === 'pos' ? ' selected-pos' : '');
+  document.getElementById('optNeg').className = 'energy-option' + (val === 'neg' ? ' selected-neg' : '');
+}
+function saveQuote() {
+  const text = document.getElementById('newQuoteText').value.trim();
+  if (!text) { showToast('請輸入語錄內容'); return; }
+  const author = document.getElementById('newQuoteAuthor').value.trim();
+  const custom = loadCustom();
+  custom.push({ text, author, energy: selectedEnergy });
+  saveCustom(custom);
+  closeModal();
+  renderList();
+  renderToday();
+  showToast('語錄已儲存 ✦');
+}
+
+// ── Toast ────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ── Stars ────────────────────────────────────────────────────────
+function createStars() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 40; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 2.5 + 0.5;
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*100}%;
+      top:${Math.random()*100}%;
+      --d:${(Math.random()*4+2).toFixed(1)}s;
+      --delay:${(Math.random()*5).toFixed(1)}s;
+      --op:${(Math.random()*0.5+0.2).toFixed(2)};
+    `;
+    c.appendChild(s);
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+document.getElementById('dateBadge').textContent = dateLabel();
+createStars();
+renderToday();
+renderList();
+</script>
+</body>
+</html>
